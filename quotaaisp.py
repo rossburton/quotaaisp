@@ -4,6 +4,7 @@ USERNAME="USER"
 PASSWORD="PASSWORD"
 
 import arrow, urllib
+from numbers import Number
 import xml.etree.ElementTree as ET
 
 def parseTime(s):
@@ -25,8 +26,8 @@ def parse(broadband):
 
 
 def analyse(data):
-    assert(isinstance(data['left'], int))
-    assert(isinstance(data['monthly'], int))
+    assert(isinstance(data['left'], Number))
+    assert(isinstance(data['monthly'], Number))
     assert(isinstance(data['expiry'], arrow.Arrow))
     assert(isinstance(data['time'], arrow.Arrow))
 
