@@ -3,7 +3,7 @@
 USERNAME="USER"
 PASSWORD="PASSWORD"
 
-import arrow, urllib
+import arrow
 from numbers import Number
 import xml.etree.ElementTree as ET
 
@@ -40,6 +40,7 @@ def analyse(data):
 
 
 if __name__ == "__main__":
+    import urllib
     result = urllib.urlopen("https://%s:%s@chaos.aa.net.uk/info" % (USERNAME, PASSWORD))
     tree = ET.parse(result)
 
