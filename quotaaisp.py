@@ -3,7 +3,7 @@
 USERNAME="USER"
 PASSWORD="PASSWORD"
 
-import arrow, datetime, time, monthdelta, urllib
+import arrow, urllib
 import xml.etree.ElementTree as ET
 
 def parseTime(s):
@@ -41,12 +41,14 @@ def analyse(data):
 if __name__ == "__main__":
     result = urllib.urlopen("https://%s:%s@chaos.aa.net.uk/info" % (USERNAME, PASSWORD))
     tree = ET.parse(result)
-    ET.dump(tree)
 
     for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
         data = parse(broadband)
         analyse(data)
-
+        print "%dGB remaining (%d%% of quota), renewed %s" % (
+            data['left'] / 1000 / 1000 / 1000,
+            data['percent_remaining'],
+            data['expiry'].humanize())
 
 import unittest
 class QuotaaispTest(unittest.TestCase):
