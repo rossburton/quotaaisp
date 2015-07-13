@@ -3,12 +3,11 @@
 USERNAME="USER"
 PASSWORD="PASSWORD"
 
-import datetime, time, monthdelta, urllib
+import arrow, datetime, time, monthdelta, urllib
 import xml.etree.ElementTree as ET
 
 def parseTime(s):
-    # TODO add unit test for this
-    return time.mktime(time.strptime(s, "%Y-%m-%d %H:%M:%S"))
+    return arrow.get(s, "YYYY-MM-DD HH:mm:ss")
 
 
 def parse(broadband):
@@ -28,14 +27,14 @@ def parse(broadband):
 def analyse(data):
     assert(isinstance(data['left'], int))
     assert(isinstance(data['monthly'], int))
-    assert(isinstance(data['expiry'], float))
-    assert(isinstance(data['time'], float))
+    assert(isinstance(data['expiry'], arrow.Arrow))
+    assert(isinstance(data['time'], arrow.Arrow))
 
     data['percent_remaining'] = data['left']*100 / data['monthly']
 
-    last_month = time.mktime((datetime.datetime.fromtimestamp(data['expiry']) - monthdelta.MonthDelta(1)).timetuple())
+    last_month = data['expiry'].replace(months=-1)
 
-    data['percent_time'] = int((data['time'] - last_month) * 100 / (data['expiry'] - last_month))
+    data['percent_time'] = int((data['time'].timestamp - last_month.timestamp) * 100 / (data['expiry'].timestamp - last_month.timestamp))
 
 
 
