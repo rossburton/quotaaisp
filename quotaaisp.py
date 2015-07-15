@@ -38,7 +38,7 @@ def analyse(data):
 
 
 if __name__ == "__main__":
-    import ConfigParser, os, sys, urllib
+    import ConfigParser, os, sys, httplib, urllib
 
     try:
         cp = ConfigParser.SafeConfigParser()
@@ -52,7 +52,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     result = urllib.urlopen("https://%s:%s@chaos.aa.net.uk/info" % (username, password))
-    # TODO handle error response
+    if result.getcode() != httplib.OK:
+        print "Cannot access CHAOS: %s" % httplib.responses[result.getcode()]
+        sys.exit(1)
+
     tree = ET.parse(result)
 
     for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
