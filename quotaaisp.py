@@ -1,11 +1,9 @@
 #! /usr/bin/env python2
 
-USERNAME="USER"
-PASSWORD="PASSWORD"
-
 import arrow
 from numbers import Number
 import xml.etree.ElementTree as ET
+
 
 def parseTime(s):
     return arrow.get(s, "YYYY-MM-DD HH:mm:ss")
@@ -40,8 +38,21 @@ def analyse(data):
 
 
 if __name__ == "__main__":
-    import urllib
-    result = urllib.urlopen("https://%s:%s@chaos.aa.net.uk/info" % (USERNAME, PASSWORD))
+    import ConfigParser, os, sys, urllib
+
+    try:
+        cp = ConfigParser.SafeConfigParser()
+        cp.read(os.path.expanduser("~/.config/quotaaisp.conf"))
+
+        username = cp.get("Config", "Username")
+        password = cp.get("Config", "Password")
+    except Exception, e:
+        print e
+        print "Please set username and password in configuration file"
+        sys.exit(1)
+
+    result = urllib.urlopen("https://%s:%s@chaos.aa.net.uk/info" % (username, password))
+    # TODO handle error response
     tree = ET.parse(result)
 
     for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
