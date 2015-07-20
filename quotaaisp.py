@@ -104,3 +104,19 @@ class QuotaaispTest(unittest.TestCase):
         xml.set("quota-time", "2015-08-01 00:00:00")
         data = analyse(parse(xml))
         self.assertEquals(data['percent_time'], 100)
+
+
+    def test_percent_remaining(self):
+        xml = self.create_data()
+
+        xml.set("quota-left", "200000000000")
+        data = analyse(parse(xml))
+        self.assertEquals(data['percent_remaining'], 100)
+
+        xml.set("quota-left", "100000000000")
+        data = analyse(parse(xml))
+        self.assertEquals(data['percent_remaining'], 50)
+
+        xml.set("quota-left", "000000000000")
+        data = analyse(parse(xml))
+        self.assertEquals(data['percent_remaining'], 0)
