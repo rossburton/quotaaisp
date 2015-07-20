@@ -33,6 +33,8 @@ def analyse(data):
 
     last_month = data['expiry'].replace(months=-1)
 
+    # How far through the current quota allocation we are in time. 0% is just
+    # started, 100% is finished.
     data['percent_time'] = int((data['time'].timestamp - last_month.timestamp) * 100 / (data['expiry'].timestamp - last_month.timestamp))
 
     return data
