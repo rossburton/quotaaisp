@@ -74,9 +74,13 @@ import unittest
 class QuotaaispTest(unittest.TestCase):
     def create_data(self):
         xml = ET.Element("broadband")
+        # 200GB monthly quota
         xml.set("quota-monthly", "200000000000")
+        # 156GB remaining
         xml.set("quota-left", "156575605264")
+        # Current time is 5pm, 13th July 2015
         xml.set("quota-time", "2015-07-13 17:00:00")
+        # Quota expires midnight, 1st August.
         xml.set("quota-expiry", "2015-08-01 00:00:00")
         return xml
 
