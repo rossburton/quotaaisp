@@ -69,13 +69,16 @@ if __name__ == "__main__":
 
 import unittest
 class QuotaaispTest(unittest.TestCase):
-    def runTest(self):
+    def create_data(self):
         xml = ET.Element("broadband")
         xml.set("quota-monthly", "200000000000")
         xml.set("quota-left", "156575605264")
         xml.set("quota-time", "2015-07-13 17:00:00")
         xml.set("quota-expiry", "2015-08-01 00:00:00")
-        data = parse(xml)
-        analyse(data)
+        return xml
+
+    def test_basic(self):
+        xml = self.create_data()
+        data = analyse(parse(xml))
         self.assertEquals(data['percent_remaining'], 78)
         self.assertEquals(data['percent_time'], 40)
