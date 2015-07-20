@@ -30,6 +30,7 @@ def analyse(data):
     assert(isinstance(data['time'], arrow.Arrow))
 
     data['percent_remaining'] = data['left']*100 / data['monthly']
+    data['percent_used'] = (data['monthly'] - data['left'])*100 / data['monthly']
 
     last_month = data['expiry'].replace(months=-1)
 
@@ -87,6 +88,7 @@ class QuotaaispTest(unittest.TestCase):
     def test_basic(self):
         xml = self.create_data()
         data = analyse(parse(xml))
+        self.assertEquals(data['percent_used'], 21)
         self.assertEquals(data['percent_remaining'], 78)
         self.assertEquals(data['percent_time'], 40)
 
@@ -120,3 +122,19 @@ class QuotaaispTest(unittest.TestCase):
         xml.set("quota-left", "000000000000")
         data = analyse(parse(xml))
         self.assertEquals(data['percent_remaining'], 0)
+
+
+    def test_percent_used(self):
+        xml = self.create_data()
+
+        xml.set("quota-left", "200000000000")
+        data = analyse(parse(xml))
+        self.assertEquals(data['percent_used'], 0)
+
+        xml.set("quota-left", "100000000000")
+        data = analyse(parse(xml))
+        self.assertEquals(data['percent_used'], 50)
+
+        xml.set("quota-left", "000000000000")
+        data = analyse(parse(xml))
+        self.assertEquals(data['percent_used'], 100)
