@@ -35,6 +35,7 @@ def analyse(data):
 
     data['percent_time'] = int((data['time'].timestamp - last_month.timestamp) * 100 / (data['expiry'].timestamp - last_month.timestamp))
 
+    return data
 
 
 if __name__ == "__main__":
