@@ -62,10 +62,11 @@ if __name__ == "__main__":
     for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
         data = parse(broadband)
         analyse(data)
-        print "%dGB remaining (%d%% of quota), renewed %s" % (
+        print "%dGB remaining (%d%% of quota), renewed %s (%d%% of time used)" % (
             data['left'] / 1000 / 1000 / 1000,
             data['percent_remaining'],
-            data['expiry'].humanize())
+            data['expiry'].humanize(),
+            data['percent_time'])
 
 import unittest
 class QuotaaispTest(unittest.TestCase):
