@@ -67,10 +67,10 @@ if __name__ == "__main__":
     for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
         data = parse(broadband)
         analyse(data)
-        print "%dGB/%dGB used (%d%%), renewed %s (%d%% of time used)" % (
+        print "%dGB used, %dGB remaining (%d%% used)\nRenewed %s (%d%%)" % (
+            data['used'] / 1000 / 1000 / 1000,
             data['left'] / 1000 / 1000 / 1000,
-            data['monthly'] / 1000 / 1000 / 1000,
-            data['percent_remaining'],
+            data['percent_used'],
             data['expiry'].humanize(),
             data['percent_time'])
 
