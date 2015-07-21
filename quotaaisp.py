@@ -29,6 +29,8 @@ def analyse(data):
     assert(isinstance(data['expiry'], arrow.Arrow))
     assert(isinstance(data['time'], arrow.Arrow))
 
+    # Amount of data used this quota allocation
+    data['used'] = data['monthly'] - data['left']
     data['percent_remaining'] = data['left']*100 / data['monthly']
     data['percent_used'] = (data['monthly'] - data['left'])*100 / data['monthly']
 
@@ -92,6 +94,23 @@ class QuotaaispTest(unittest.TestCase):
         self.assertEquals(data['percent_used'], 21)
         self.assertEquals(data['percent_remaining'], 78)
         self.assertEquals(data['percent_time'], 40)
+
+    def test_used(self):
+        xml = self.create_data()
+        xml.set("quota-monthly", 200)
+
+        xml.set("quota-left", 200)
+        data = analyse(parse(xml))
+        self.assertEquals(data['used'], 0)
+
+        xml.set("quota-left", 100)
+        data = analyse(parse(xml))
+        self.assertEquals(data['used'], 100)
+
+        xml.set("quota-left", 0)
+        data = analyse(parse(xml))
+        self.assertEquals(data['used'], 200)
+
 
     def test_percent_time(self):
         xml = self.create_data()
