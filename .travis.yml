@@ -1,7 +1,8 @@
 language: python
 python:
- - "2.7"
+ - "3.2"
+ - "3.4"
 install:
- - pip install arrow
+ - pip3 install arrow
 script:
- - python -m unittest quotaaisp
+ - python3 -m unittest quotaaisp

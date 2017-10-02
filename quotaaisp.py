@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
 import arrow
 from numbers import Number
@@ -31,8 +31,8 @@ def analyse(data):
 
     # Amount of data used this quota allocation
     data['used'] = data['monthly'] - data['left']
-    data['percent_remaining'] = data['left']*100 / data['monthly']
-    data['percent_used'] = (data['monthly'] - data['left'])*100 / data['monthly']
+    data['percent_remaining'] = int(data['left']*100 / data['monthly'])
+    data['percent_used'] = int((data['monthly'] - data['left'])*100 / data['monthly'])
 
     last_month = data['expiry'].replace(months=-1)
 
@@ -44,22 +44,25 @@ def analyse(data):
 
 
 if __name__ == "__main__":
-    import ConfigParser, os, sys, httplib, urllib
+    import configparser, os, sys, http.client, urllib.request, urllib.parse, urllib.error, base64
 
     try:
-        cp = ConfigParser.SafeConfigParser()
+        cp = configparser.SafeConfigParser()
         cp.read(os.path.expanduser("~/.config/quotaaisp.conf"))
 
         username = cp.get("Config", "Username")
         password = cp.get("Config", "Password")
-    except Exception, e:
-        print e
-        print "Please set username and password in configuration file"
+    except Exception as e:
+        print(e)
+        print("Please set username and password in configuration file")
         sys.exit(1)
 
-    result = urllib.urlopen("https://%s:%s@chaos.aa.net.uk/info" % (username, password))
-    if result.getcode() != httplib.OK:
-        print "Cannot access CHAOS: %s" % httplib.responses[result.getcode()]
+    request = urllib.request.Request("https://chaos.aa.net.uk/info")
+    request.add_header("Authorization", b"Basic %s" % base64.b64encode(b'%s:%s' % (username.encode("ascii"), password.encode("ascii"))))
+    result = urllib.request.urlopen(request)
+
+    if result.getcode() != http.client.OK:
+        print("Cannot access CHAOS: %s" % http.client.responses[result.getcode()])
         sys.exit(1)
 
     tree = ET.parse(result)
@@ -69,17 +72,17 @@ if __name__ == "__main__":
         analyse(data)
 
         if data['used'] < 0:
-            print "%dGB in credit, %dGB remaining\nRenewed %s" % (
+            print("%dGB in credit, %dGB remaining\nRenewed %s" % (
                 abs(data['used'] / 1000 / 1000 / 1000),
                 data['left'] / 1000 / 1000 / 1000,
-                data['expiry'].humanize())
+                data['expiry'].humanize()))
         else:
-            print "%dGB used, %dGB remaining (%d%% used)\nRenewed %s (%d%%)" % (
+            print("%dGB used, %dGB remaining (%d%% used)\nRenewed %s (%d%%)" % (
                 data['used'] / 1000 / 1000 / 1000,
                 data['left'] / 1000 / 1000 / 1000,
                 data['percent_used'],
                 data['expiry'].humanize(),
-                data['percent_time'])
+                data['percent_time']))
 
 import unittest
 class QuotaaispTest(unittest.TestCase):
@@ -98,9 +101,9 @@ class QuotaaispTest(unittest.TestCase):
     def test_basic(self):
         xml = self.create_data()
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_used'], 21)
-        self.assertEquals(data['percent_remaining'], 78)
-        self.assertEquals(data['percent_time'], 40)
+        self.assertEqual(data['percent_used'], 21)
+        self.assertEqual(data['percent_remaining'], 78)
+        self.assertEqual(data['percent_time'], 40)
 
     def test_used(self):
         xml = self.create_data()
@@ -108,15 +111,15 @@ class QuotaaispTest(unittest.TestCase):
 
         xml.set("quota-left", 200)
         data = analyse(parse(xml))
-        self.assertEquals(data['used'], 0)
+        self.assertEqual(data['used'], 0)
 
         xml.set("quota-left", 100)
         data = analyse(parse(xml))
-        self.assertEquals(data['used'], 100)
+        self.assertEqual(data['used'], 100)
 
         xml.set("quota-left", 0)
         data = analyse(parse(xml))
-        self.assertEquals(data['used'], 200)
+        self.assertEqual(data['used'], 200)
 
 
     def test_percent_time(self):
@@ -124,15 +127,15 @@ class QuotaaispTest(unittest.TestCase):
 
         xml.set("quota-time", "2015-07-13 17:00:00")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_time'], 40)
+        self.assertEqual(data['percent_time'], 40)
 
         xml.set("quota-time", "2015-07-01 00:00:00")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_time'], 0)
+        self.assertEqual(data['percent_time'], 0)
 
         xml.set("quota-time", "2015-08-01 00:00:00")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_time'], 100)
+        self.assertEqual(data['percent_time'], 100)
 
 
     def test_percent_remaining(self):
@@ -140,15 +143,15 @@ class QuotaaispTest(unittest.TestCase):
 
         xml.set("quota-left", "200000000000")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_remaining'], 100)
+        self.assertEqual(data['percent_remaining'], 100)
 
         xml.set("quota-left", "100000000000")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_remaining'], 50)
+        self.assertEqual(data['percent_remaining'], 50)
 
         xml.set("quota-left", "000000000000")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_remaining'], 0)
+        self.assertEqual(data['percent_remaining'], 0)
 
 
     def test_percent_used(self):
@@ -156,12 +159,12 @@ class QuotaaispTest(unittest.TestCase):
 
         xml.set("quota-left", "200000000000")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_used'], 0)
+        self.assertEqual(data['percent_used'], 0)
 
         xml.set("quota-left", "100000000000")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_used'], 50)
+        self.assertEqual(data['percent_used'], 50)
 
         xml.set("quota-left", "000000000000")
         data = analyse(parse(xml))
-        self.assertEquals(data['percent_used'], 100)
+        self.assertEqual(data['percent_used'], 100)
