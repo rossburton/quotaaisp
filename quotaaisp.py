@@ -67,12 +67,19 @@ if __name__ == "__main__":
     for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
         data = parse(broadband)
         analyse(data)
-        print "%dGB used, %dGB remaining (%d%% used)\nRenewed %s (%d%%)" % (
-            data['used'] / 1000 / 1000 / 1000,
-            data['left'] / 1000 / 1000 / 1000,
-            data['percent_used'],
-            data['expiry'].humanize(),
-            data['percent_time'])
+
+        if data['used'] < 0:
+            print "%dGB in credit, %dGB remaining\nRenewed %s" % (
+                abs(data['used'] / 1000 / 1000 / 1000),
+                data['left'] / 1000 / 1000 / 1000,
+                data['expiry'].humanize())
+        else:
+            print "%dGB used, %dGB remaining (%d%% used)\nRenewed %s (%d%%)" % (
+                data['used'] / 1000 / 1000 / 1000,
+                data['left'] / 1000 / 1000 / 1000,
+                data['percent_used'],
+                data['expiry'].humanize(),
+                data['percent_time'])
 
 import unittest
 class QuotaaispTest(unittest.TestCase):
