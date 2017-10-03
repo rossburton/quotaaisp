@@ -173,3 +173,18 @@ class QuotaaispTest(unittest.TestCase):
         xml.set("quota-left", "000000000000")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_used'], 100)
+
+    def test_auth(self):
+        username, password = get_auth()
+        if username and password:
+            tree = fetch(username, password)
+            node = tree.getroot()
+            self.assertEqual(node.tag, "{https://chaos.aa.net.uk/}chaos")
+
+            node = node.find("{https://chaos.aa.net.uk/}login")
+            self.assertIsNotNone(node)
+
+            node = node.find("{https://chaos.aa.net.uk/}broadband")
+            self.assertIsNotNone(node)
+        else:
+            self.skipTest("Cannot find authentication credentials")
