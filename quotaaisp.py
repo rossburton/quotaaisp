@@ -8,6 +8,27 @@ import xml.etree.ElementTree as ET
 def parseTime(s):
     return arrow.get(s, "YYYY-MM-DD HH:mm:ss")
 
+def get_auth():
+    import configparser, os
+
+    cp = configparser.ConfigParser()
+    cp.read(os.path.expanduser("~/.config/quotaaisp.conf"))
+    if cp.has_option("Config", "Username") and cp.has_option("Config", "Password"):
+        return cp.get("Config", "Username"), cp.get("Config", "Password")
+    else:
+        return None, None
+
+def fetch(username, password):
+    import http.client, urllib.request, urllib.parse, base64
+
+    request = urllib.request.Request("https://chaos.aa.net.uk/info")
+    request.add_header("Authorization", b"Basic " + base64.b64encode(username.encode("ascii") + b":" + password.encode("ascii")))
+    result = urllib.request.urlopen(request)
+
+    if result.getcode() != http.client.OK:
+        print("Cannot access CHAOS: %s" % http.client.responses[result.getcode()])
+        sys.exit(1)
+    return ET.parse(result)
 
 def parse(broadband):
     """
@@ -44,29 +65,13 @@ def analyse(data):
 
 
 if __name__ == "__main__":
-    import configparser, os, sys, http.client, urllib.request, urllib.parse, urllib.error, base64
-
-    try:
-        cp = configparser.SafeConfigParser()
-        cp.read(os.path.expanduser("~/.config/quotaaisp.conf"))
-
-        username = cp.get("Config", "Username")
-        password = cp.get("Config", "Password")
-    except Exception as e:
-        print(e)
-        print("Please set username and password in configuration file")
+    import sys
+    username, password = get_auth()
+    if not username or not password:
+        print("Please set username/password")
         sys.exit(1)
 
-    request = urllib.request.Request("https://chaos.aa.net.uk/info")
-    request.add_header("Authorization", b"Basic %s" % base64.b64encode(b'%s:%s' % (username.encode("ascii"), password.encode("ascii"))))
-    result = urllib.request.urlopen(request)
-
-    if result.getcode() != http.client.OK:
-        print("Cannot access CHAOS: %s" % http.client.responses[result.getcode()])
-        sys.exit(1)
-
-    tree = ET.parse(result)
-
+    tree = fetch(username, password)
     for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
         data = parse(broadband)
         analyse(data)
