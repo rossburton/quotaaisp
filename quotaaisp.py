@@ -21,25 +21,27 @@ def get_auth():
 def fetch(username, password):
     import http.client, urllib.request, urllib.parse, base64
 
-    request = urllib.request.Request("https://chaos.aa.net.uk/info")
+    request = urllib.request.Request("https://chaos2.aa.net.uk/broadband/quota/xml")
     request.add_header("Authorization", b"Basic " + base64.b64encode(username.encode("ascii") + b":" + password.encode("ascii")))
     result = urllib.request.urlopen(request)
 
     if result.getcode() != http.client.OK:
         print("Cannot access CHAOS: %s" % http.client.responses[result.getcode()])
         sys.exit(1)
-    return ET.parse(result)
+    return result
 
 def parse(broadband):
     """
     broadband is a ElementTree.Element for the <broadband> node.  Returns a dict
     of parsed data.
     """
+    if broadband.get("quota-monthly") is None or broadband.get("quota-remaining") is None or broadband.get("quota-timestamp") is None:
+       raise Exception("Missing attributes")
+
     data = {
         "monthly": int(broadband.get("quota-monthly")),
-        "left": int(broadband.get("quota-left")),
-        "time": parseTime(broadband.get("quota-time")),
-        "expiry": parseTime(broadband.get("quota-expiry"))
+        "left": int(broadband.get("quota-remaining")),
+        "time": parseTime(broadband.get("quota-timestamp")),
         }
     return data
 
@@ -47,7 +49,6 @@ def parse(broadband):
 def analyse(data):
     assert(isinstance(data['left'], Number))
     assert(isinstance(data['monthly'], Number))
-    assert(isinstance(data['expiry'], arrow.Arrow))
     assert(isinstance(data['time'], arrow.Arrow))
 
     # Amount of data used this quota allocation
@@ -55,11 +56,12 @@ def analyse(data):
     data['percent_remaining'] = int(data['left']*100 / data['monthly'])
     data['percent_used'] = int((data['monthly'] - data['left'])*100 / data['monthly'])
 
-    last_month = data['expiry'].replace(months=-1)
+    data['expiry'] = data['time'].ceil('month')
+    data['start'] = data['time'].floor('month')
 
     # How far through the current quota allocation we are in time. 0% is just
     # started, 100% is finished.
-    data['percent_time'] = int((data['time'].timestamp - last_month.timestamp) * 100 / (data['expiry'].timestamp - last_month.timestamp))
+    data['percent_time'] = int((data['time'].timestamp - data['start'].timestamp) * 100 / (data['expiry'].timestamp - data['start'].timestamp))
 
     return data
 
@@ -71,8 +73,8 @@ if __name__ == "__main__":
         print("Please set username/password")
         sys.exit(1)
 
-    tree = fetch(username, password)
-    for broadband in tree.iter("{https://chaos.aa.net.uk/}broadband"):
+    tree = ET.parse(fetch(username, password))
+    for broadband in tree.iter("{https://chaos2.aa.net.uk/}quota"):
         data = parse(broadband)
         analyse(data)
 
@@ -96,11 +98,9 @@ class QuotaaispTest(unittest.TestCase):
         # 200GB monthly quota
         xml.set("quota-monthly", "200000000000")
         # 156GB remaining
-        xml.set("quota-left", "156575605264")
+        xml.set("quota-remaining", "156575605264")
         # Current time is 5pm, 13th July 2015
-        xml.set("quota-time", "2015-07-13 17:00:00")
-        # Quota expires midnight, 1st August.
-        xml.set("quota-expiry", "2015-08-01 00:00:00")
+        xml.set("quota-timestamp", "2015-07-13 17:00:00")
         return xml
 
     def test_basic(self):
@@ -114,15 +114,15 @@ class QuotaaispTest(unittest.TestCase):
         xml = self.create_data()
         xml.set("quota-monthly", 200)
 
-        xml.set("quota-left", 200)
+        xml.set("quota-remaining", 200)
         data = analyse(parse(xml))
         self.assertEqual(data['used'], 0)
 
-        xml.set("quota-left", 100)
+        xml.set("quota-remaining", 100)
         data = analyse(parse(xml))
         self.assertEqual(data['used'], 100)
 
-        xml.set("quota-left", 0)
+        xml.set("quota-remaining", 0)
         data = analyse(parse(xml))
         self.assertEqual(data['used'], 200)
 
@@ -130,15 +130,15 @@ class QuotaaispTest(unittest.TestCase):
     def test_percent_time(self):
         xml = self.create_data()
 
-        xml.set("quota-time", "2015-07-13 17:00:00")
+        xml.set("quota-timestamp", "2015-07-13 17:00:00")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_time'], 40)
 
-        xml.set("quota-time", "2015-07-01 00:00:00")
+        xml.set("quota-timestamp", "2015-07-01 00:00:00")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_time'], 0)
 
-        xml.set("quota-time", "2015-08-01 00:00:00")
+        xml.set("quota-timestamp", "2015-07-31 23:59:59")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_time'], 100)
 
@@ -146,15 +146,15 @@ class QuotaaispTest(unittest.TestCase):
     def test_percent_remaining(self):
         xml = self.create_data()
 
-        xml.set("quota-left", "200000000000")
+        xml.set("quota-remaining", "200000000000")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_remaining'], 100)
 
-        xml.set("quota-left", "100000000000")
+        xml.set("quota-remaining", "100000000000")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_remaining'], 50)
 
-        xml.set("quota-left", "000000000000")
+        xml.set("quota-remaining", "000000000000")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_remaining'], 0)
 
@@ -162,29 +162,33 @@ class QuotaaispTest(unittest.TestCase):
     def test_percent_used(self):
         xml = self.create_data()
 
-        xml.set("quota-left", "200000000000")
+        xml.set("quota-remaining", "200000000000")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_used'], 0)
 
-        xml.set("quota-left", "100000000000")
+        xml.set("quota-remaining", "100000000000")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_used'], 50)
 
-        xml.set("quota-left", "000000000000")
+        xml.set("quota-remaining", "000000000000")
         data = analyse(parse(xml))
         self.assertEqual(data['percent_used'], 100)
 
     def test_auth(self):
         username, password = get_auth()
         if username and password:
-            tree = fetch(username, password)
-            node = tree.getroot()
-            self.assertEqual(node.tag, "{https://chaos.aa.net.uk/}chaos")
-
-            node = node.find("{https://chaos.aa.net.uk/}login")
+            node = ET.parse(fetch(username, password)).getroot()
+            self.assertEqual(node.tag, "{https://chaos2.aa.net.uk/}chaos")
+            node = node.find("{https://chaos2.aa.net.uk/}quota")
             self.assertIsNotNone(node)
+        else:
+            self.skipTest("Cannot find authentication credentials")
 
-            node = node.find("{https://chaos.aa.net.uk/}broadband")
-            self.assertIsNotNone(node)
+    def test_fetch(self):
+        username, password = get_auth()
+        if username and password:
+            response = fetch(username, password)
+            tree = ET.parse(response)
+            #ET.dump(tree)
         else:
             self.skipTest("Cannot find authentication credentials")
