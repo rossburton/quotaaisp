@@ -19,51 +19,38 @@ def get_auth():
         return None, None
 
 def fetch(username, password):
-    import http.client, urllib.request, urllib.parse, base64
+    import http.client, urllib.request, urllib.parse, base64, json
 
-    request = urllib.request.Request("https://chaos2.aa.net.uk/broadband/quota/xml")
+    request = urllib.request.Request("https://chaos2.aa.net.uk/broadband/info")
     request.add_header("Authorization", b"Basic " + base64.b64encode(username.encode("ascii") + b":" + password.encode("ascii")))
     result = urllib.request.urlopen(request)
 
     if result.getcode() != http.client.OK:
         print("Cannot access CHAOS: %s" % http.client.responses[result.getcode()])
         sys.exit(1)
-    return result
-
-def parse(broadband):
-    """
-    broadband is a ElementTree.Element for the <broadband> node.  Returns a dict
-    of parsed data.
-    """
-    if broadband.get("quota-monthly") is None or broadband.get("quota-remaining") is None or broadband.get("quota-timestamp") is None:
-       raise Exception("Missing attributes")
-
-    data = {
-        "monthly": int(broadband.get("quota-monthly")),
-        "left": int(broadband.get("quota-remaining")),
-        "time": parseTime(broadband.get("quota-timestamp")),
-        }
-    return data
-
+    
+    return json.loads(result.read())
 
 def analyse(data):
-    assert(isinstance(data['left'], Number))
-    assert(isinstance(data['monthly'], Number))
-    assert(isinstance(data['time'], arrow.Arrow))
+    result = dict(data)
+
+    quota_remaining = result['quota_remaining'] = int(data['quota_remaining'])
+    quota_monthly = result['quota_monthly'] = int(data['quota_monthly'])
+    quota_timestamp = parseTime(data['quota_timestamp'])
 
     # Amount of data used this quota allocation
-    data['used'] = data['monthly'] - data['left']
-    data['percent_remaining'] = int(data['left']*100 / data['monthly'])
-    data['percent_used'] = int((data['monthly'] - data['left'])*100 / data['monthly'])
+    result['used'] = quota_monthly - quota_remaining
+    result['percent_remaining'] = int(quota_remaining*100 / quota_monthly)
+    result['percent_used'] = int((quota_monthly - quota_remaining)*100 / quota_monthly)
 
-    data['expiry'] = data['time'].ceil('month')
-    data['start'] = data['time'].floor('month')
+    result['expiry'] = quota_timestamp.ceil('month')
+    result['start'] = quota_timestamp.floor('month')
 
     # How far through the current quota allocation we are in time. 0% is just
     # started, 100% is finished.
-    data['percent_time'] = int((data['time'].timestamp - data['start'].timestamp) * 100 / (data['expiry'].timestamp - data['start'].timestamp))
+    result['percent_time'] = int((quota_timestamp.timestamp - result['start'].timestamp) * 100 / (result['expiry'].timestamp - result['start'].timestamp))
 
-    return data
+    return result
 
 
 if __name__ == "__main__":
@@ -73,23 +60,25 @@ if __name__ == "__main__":
         print("Please set username/password")
         sys.exit(1)
 
-    tree = ET.parse(fetch(username, password))
-    for broadband in tree.iter("{https://chaos2.aa.net.uk/}quota"):
-        data = parse(broadband)
-        analyse(data)
+    data = fetch(username, password)
+    for info in data['info']:
+        result = analyse(info)
 
-        if data['used'] < 0:
+        print(f"Download {result['tx_rate_adjusted']} Upload {result['rx_rate']}")
+        if result['used'] < 0:
             print("%dGB in credit, %dGB remaining\nRenewed %s" % (
-                abs(data['used'] / 1000 / 1000 / 1000),
-                data['left'] / 1000 / 1000 / 1000,
-                data['expiry'].humanize()))
+                abs(result['used'] / 1000 / 1000 / 1000),
+                result['quota_remaining'] / 1000 / 1000 / 1000,
+                result['expiry'].humanize()))
         else:
             print("%dGB used, %dGB remaining (%d%% used)\nRenewed %s (%d%%)" % (
-                data['used'] / 1000 / 1000 / 1000,
-                data['left'] / 1000 / 1000 / 1000,
-                data['percent_used'],
-                data['expiry'].humanize(),
-                data['percent_time']))
+                result['used'] / 1000 / 1000 / 1000,
+                result['quota_remaining'] / 1000 / 1000 / 1000,
+                result['percent_used'],
+                result['expiry'].humanize(),
+                result['percent_time']))
+
+# configure ; set traffic-control smart-queue Bufferbloat upload rate 790000bit; commit; save
 
 import unittest
 class QuotaaispTest(unittest.TestCase):
