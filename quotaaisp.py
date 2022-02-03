@@ -61,7 +61,7 @@ def analyse(data):
 
     # How far through the current quota allocation we are in time. 0% is just
     # started, 100% is finished.
-    data['percent_time'] = int((data['time'].timestamp - data['start'].timestamp) * 100 / (data['expiry'].timestamp - data['start'].timestamp))
+    data['percent_time'] = int((data['time'].int_timestamp - data['start'].int_timestamp) * 100 / (data['expiry'].int_timestamp - data['start'].int_timestamp))
 
     return data
 
