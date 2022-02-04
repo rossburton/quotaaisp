@@ -82,13 +82,13 @@ if __name__ == "__main__":
             print("%dGB in credit, %dGB remaining\nRenewed %s" % (
                 abs(data['used'] / 1000 / 1000 / 1000),
                 data['left'] / 1000 / 1000 / 1000,
-                data['expiry'].humanize()))
+                data['expiry'].humanize(granularity='day')))
         else:
             print("%dGB used, %dGB remaining (%d%% used)\nRenewed %s (%d%%)" % (
                 data['used'] / 1000 / 1000 / 1000,
                 data['left'] / 1000 / 1000 / 1000,
                 data['percent_used'],
-                data['expiry'].humanize(),
+                data['expiry'].humanize(granularity='day'),
                 data['percent_time']))
 
 import unittest
