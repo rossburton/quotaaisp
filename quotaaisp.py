@@ -12,11 +12,8 @@ def get_auth():
     import configparser, os
 
     cp = configparser.ConfigParser()
-    cp.read(os.path.expanduser("~/.config/quotaaisp.conf"))
-    if cp.has_option("Config", "Username") and cp.has_option("Config", "Password"):
-        return cp.get("Config", "Username"), cp.get("Config", "Password")
-    else:
-        return None, None
+    cp.read_file(open(os.path.expanduser("~/.config/quotaaisp.conf")))
+    return cp.get("Config", "Username"), cp.get("Config", "Password")
 
 def fetch(username, password):
     import http.client, urllib.request, urllib.parse, base64
@@ -68,9 +65,11 @@ def analyse(data):
 
 if __name__ == "__main__":
     import sys
-    username, password = get_auth()
-    if not username or not password:
-        print("Please set username/password")
+
+    try:
+        username, password = get_auth()
+    except Exception as e:
+        print(f"Cannot load configuration: {e}")
         sys.exit(1)
 
     tree = ET.parse(fetch(username, password))
