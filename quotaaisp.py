@@ -13,7 +13,8 @@ def get_auth():
     import configparser, os
 
     cp = configparser.ConfigParser()
-    cp.read_file(open(os.path.expanduser("~/.config/quotaaisp.conf")))
+    with open(os.path.expanduser("~/.config/quotaaisp.conf")) as f:
+        cp.read_file(f)
     return cp.get("Config", "Username"), cp.get("Config", "Password")
 
 
