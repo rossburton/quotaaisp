@@ -1,0 +1,12 @@
+image: python:latest
+
+black:
+  stage: test
+  image: registry.gitlab.com/pipeline-components/black:latest
+  script:
+    - black --check  -- .
+
+test:
+  stage: test
+  script:
+    - python3 -munittest -v quotaaisp
